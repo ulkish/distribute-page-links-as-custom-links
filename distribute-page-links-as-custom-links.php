@@ -27,37 +27,77 @@ function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site
     restore_current_blog();
     $origin_blog_id = get_current_blog_id();
     $origin_blog_id = ( $origin_blog_id === $destination_blog_id ) ? $args->site->blog_id : $origin_blog_id;
+
+
+
+
+    // METHOD 1
+    // Check if meta_key has a value of 'page' and is followed by a post ID
+    $args = array(
+        'order'      => 'DESC',
+        'posts_per_page' => 1,
+        'meta_query' => array(
+            array(
+                'value' => 'page',
+                'compare' => '=',
+            )
+        )
+    );
+
+    $query = new WP_Query($args);
+
+
+
+
+
+
+    // Testing with hardcoded values
+    // delete_post_meta( $new_post_id, 'sections_3_media_items_1_action_link_type' );
+    // delete_post_meta( $new_post_id, 'sections_3_media_items_1_action_page_link' );
+    // delete_post_meta( $new_post_id, 'sections_3_media_items_1_action_custom_link' );
+    // add_post_meta( $new_post_id, 'sections_3_media_items_1_action_link_type', 'custom');
+    // add_post_meta( $new_post_id, 'sections_3_media_items_1_action_custom_link', 'http://propane.local/pagetocustomagain/');
+
     // Get meta keys from origin blog
     $post_meta_keys = get_post_meta( $original_post_id );
-
-    // Go back
-    switch_to_blog( $destination_blog_id );
-
-    delete_post_meta( $new_post_id, 'sections_1_pages_0_action_page_link' );
-    add_post_meta( $new_post_id, 'sections_1_pages_0_action_custom_link', 'http://propane.local/pagetocustom/');
-
-
-
     if ( $post_meta_keys ) {
 
         foreach( $post_meta_keys as $key => $value ) {
-            // Check if the meta_key ends with 'page_link' (TODO: and doesn't start with an underscore)
-            // Check if the content is numeric (to get a post id)
 
-            // echo "key: " . $key . " ";
-            if ( preg_match( "/(page_link)$/", $key ) ) {
-                // Switch before asking for the post meta!
-                $key_content = get_post_meta( $original_post_id, $key );
 
-                echo $key_content;
+
+
+            // METHOD 2
+            // Check if the meta_key ends with 'page_link' and doesn't start with an underscore
+            // Check if the content is a post ID (with is_numeric())
+            if ( preg_match( "/^(?!_).+(page_link)$/", $key ) ) {
+
+                restore_current_blog();
+                $post_meta_value = get_post_meta( $original_post_id, $key );
+
+                // TODO: Get guid
+                switch_to_blog( $destination_blog_id );
+
+
+
+                // delete_post_meta( $new_post_id, $key );
+                // $changed_meta_key = preg_replace( "/(page_link)$/", "custom_link", $key );
+                // $add_post_meta( $new_post_id, $changed_meta_key, $changed_meta_value );
             }
+
+
+
+
+
+
+
 
             // foreach ( $page_link_matches as $match ) {
             //     $match_key_content = get_post_meta( $original_post_id, $match );
             //     echo "This is what the content looks like: " . $match_key_content . " ";
 
             // }
-            // if ( is_numeric( $patch ) ) {
+            // if ( is_numeric( $match ) ) {
 
             //     echo "This key matched: " . $key . " ";
 
@@ -65,55 +105,16 @@ function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site
 
 
 
-
-
-            // $field_object = get_field_object( $key, $post->ID );
-
-
-            // if( $field_object['type'] == 'image' ) {
-
-            //     $field_name = $field_object['_name'];
-
-            //     $image_id = get_post_meta( $new_post_id, $field_name );
-
-            //     $original_media_id = $image_id[0];
-
-            //     $meta_key = 'dt_original_media_id';
-
-
-            //     $args = array(
-            //         'post_type'  => 'attachment',
-            //         'post_status' => 'inherit',
-            //         'order'      => 'DESC',
-            //         'posts_per_page' => 1,
-            //         'meta_query' => array(
-            //             array(
-            //                 'key' => $meta_key,
-            //                 'value' => $original_media_id,
-            //                 'compare' => '=',
-            //             )
-            //         )
-            //     );
-
-            //     $query = new WP_Query($args);
-            //     $acf_image_id = $query->posts[0]->ID;
-
-
-            //     if ($acf_image_id && get_post( $acf_image_id ) ) {
-            //         if ( wp_get_attachment_image( $acf_image_id, 'thumbnail' ) ) {
-
-            //             update_post_meta( $new_post_id, $field_name, $acf_image_id, $original_media_id );
-
-            //             } else {
-
-            //             }
-            //     }
-            // }
         }
+
     }
+
+    // Go back
+    switch_to_blog( $destination_blog_id );
+
     return false;
 }
-// add_action( 'dt_push_post', 'distribute_acf_page_link', 10, 4 );
+add_action( 'dt_push_post', 'distribute_acf_page_link', 10, 4 );
 
 
 
@@ -123,74 +124,3 @@ function pull_acf_page_link( $new_post_id, $args, $post_array ) {
     distribute_acf_page_link( $new_post_id, $original_post_id, $args, $destination_blog_id );
 }
 // add_action( 'dt_pull_post', 'pull_acf_page_link', 10, 3 );
-
-
-// function set_acf_media ($boolean, $new_post_id, $media, $post_id, $args, $site){
-
-// 	$destination_blog_id = (is_numeric($site)) ? $site : $site->site->blog_id;
-
-// 	// Switch to origin to get id
-//     restore_current_blog();
-//     $origin_blog_id = get_current_blog_id();
-//     $origin_blog_id = ($origin_blog_id===$destination_blog_id) ? $args->site->blog_id : $origin_blog_id;
-
-//     switch_to_blog( $origin_blog_id );
-
-// 	$media = \Distributor\Utils\prepare_media( $post_id );
-
-// 	$fields = get_fields($post_id);
-
-//     if ($fields) {
-// 	    foreach( $fields as $key => $value ) {
-
-// 			$field_object = get_field_object( $key, $post_id);
-
-// 			if( $field_object['type'] == 'image' ) {
-// 				$field_name = $field_object['value'];
-// 				if ($field_name!=''){
-// 					$destination_site_url = parse_url( $field_name ); // destination
-// 					$src_site_url = parse_url(get_site_url()); // main
-
-// 					$field_name = str_replace( $destination_site_url['host'], $src_site_url['host'], $field_name );
-// 				}
-// 				$image_id = get_image_id( $field_name );
-
-// 				$acf_image = \Distributor\Utils\format_media_post( get_post( $image_id ) );
-// 				$featured_image_id = get_post_thumbnail_id( $post_id );
-
-// 				$acf_image['featured'] = ( $featured_image_id == $image_id ) ? true : false;
-// 				$media[] = $acf_image;
-// 			}
-// 		}
-// 	}
-
-// 	// Go back
-// 	switch_to_blog( $destination_blog_id );
-
-// 	\Distributor\Utils\set_media( $new_post_id, $media );
-// }
-// add_action( 'dt_push_post_media', 'set_acf_media', 10, 6 );
-
-
-
-// add_action( 'dt_pull_post_media', 'pull_acf_media', 10, 6 );
-// function pull_acf_media( $boolean, $new_post_id, $media, $original_post_id, $post_array, $site ) {
-
-//     $destination_blog_id = get_current_blog_id();
-
-//     set_acf_media( $boolean, $new_post_id, $media, $original_post_id, $site, $destination_blog_id );
-// }
-
-// function get_image_id( $image_url ) {
-//     $args = array(
-//         'guid'  => $image_url,
-//         'posts_per_page' => 1
-//     );
-
-//     $query = new WP_Query( $args );
-//     $attachment = $query->posts[0]->ID;
-
-// 	if( $attachment ){
-//         return $attachment;
-// 	}
-// }
