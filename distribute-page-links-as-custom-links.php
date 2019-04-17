@@ -41,6 +41,7 @@ function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site
     if ( $post_meta_keys ) {
 
         foreach( $post_meta_keys as $key => $value) {
+
             // If link_type is found
             if ( $value[0] === 'page') {
 
@@ -56,20 +57,16 @@ function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site
                 }
 
                 $meta_key = get_key_by_mid( $new_post_id, $meta_id );
-                // Not working!
                 $changed_meta_key = preg_replace( "/(page_link)$/", "custom_link", $meta_key );
 
                 // NOTE: Sometimes there's an unused custom link with a post in PDF form,
                 // it'll be updated if found.
 
                 if ( $key && $post_guid ) {
-                    echo '$meta_key:' . $meta_key . ' ';
-                    echo '$changed_meta_key:' . $meta_key . ' ';
-                    echo '$key:' . $key . ' ';
-                    echo '$post_guid:' . $post_guid . ' ';
-                    // $delete_post_meta( $new_post_id, $meta_key );
-                    // $update_post_meta( $new_post_id, $changed_meta_key, $post_guid );
-                    // $update_post_meta( $new_post_id, $key, 'custom', 'page' );
+                    // Something about this isn't working
+                    $delete_post_meta( $new_post_id, $meta_key );
+                    $update_post_meta( $new_post_id, $changed_meta_key, $post_guid );
+                    $update_post_meta( $new_post_id, $key, 'custom', 'page' );
                 }
             }
         }
