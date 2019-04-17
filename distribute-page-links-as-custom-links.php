@@ -33,82 +33,37 @@ function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site
     $post_meta_keys = get_post_meta( $new_post_id );
 
 
-
-    // METHOD 1
-    // Check if any meta_key has a value of 'page' and is followed by a post ID
-    // Get the guid from the post ID inside of *page_link
-    // Update the *page_link to *custom_link, then place the guid inside.
     if ( $post_meta_keys ) {
 
         foreach( $post_meta_keys as $key => $value) {
 
-            // If link_type is found
-            if ( $value[0] === 'page') {
+            // Check if the meta_key ends with 'page_link' and doesn't start with an underscore
+            if (  preg_match( "/^(?!_).+(page_link)$/", $key ) ) {
 
-                $meta_id = get_mid_by_key( $new_post_id, $key );
-                $meta_id += 2;
-                $post_id = get_value_by_mid( $new_post_id, $meta_id );
+                // Go to origin blog to get the post ID inside the meta_key
+                restore_current_blog();
+                $meta_key_value = get_post_meta( $original_post_id, $key );
+                // If its a post ID get the guid value from the post ID
+                if ( is_numeric( $meta_key_value[0] ) ) {
 
-                // If it's a post ID get its 'guid' value
-                if ( is_numeric( $post_id ) ) {
-                    restore_current_blog();
-                    $post_guid = get_the_guid( $post_id );
+                    $post_guid = get_the_guid( $meta_key_value[0] );
+                    echo '$post_guid:' . $post_guid . ' ';
                     switch_to_blog( $destination_blog_id );
+                    // Delete page_link and add custom_link
+                    $changed_meta_key = preg_replace( "/(page_link)$/", "custom_link", $key );
+                    echo '$changed_meta_key:' . $changed_meta_key . ' ';
+                    delete_post_meta( $new_post_id, $key );
+                    update_post_meta( $new_post_id, $changed_meta_key, $post_guid );
+                    // Change link_type
+                    $changed_link_type = preg_replace( "/(page_link)$/", "link_type", $key );
+                    echo '$changed_link_type:' . $changed_link_type . ' ';
+                    update_post_meta( $new_post_id, $changed_link_type, 'custom', 'page' );
+
                 }
-
-                $meta_key = get_key_by_mid( $new_post_id, $meta_id );
-                $changed_meta_key = preg_replace( "/(page_link)$/", "custom_link", $meta_key );
-
-                // NOTE: Sometimes there's an unused custom link with a post in PDF form,
-                // it'll be updated if found.
-
-                if ( $key && $post_guid ) {
-                    // Something about this isn't working
-                    $delete_post_meta( $new_post_id, $meta_key );
-                    $update_post_meta( $new_post_id, $changed_meta_key, $post_guid );
-                    $update_post_meta( $new_post_id, $key, 'custom', 'page' );
-                }
+                switch_to_blog( $destination_blog_id );
             }
         }
     }
-
-
-    // Testing with hardcoded values
-    // delete_post_meta( $new_post_id, 'sections_3_media_items_1_action_link_type' );
-    // delete_post_meta( $new_post_id, 'sections_3_media_items_1_action_page_link' );
-    // delete_post_meta( $new_post_id, 'sections_3_media_items_1_action_custom_link' );
-    // add_post_meta( $new_post_id, 'sections_3_media_items_1_action_link_type', 'custom');
-    // add_post_meta( $new_post_id, 'sections_3_media_items_1_action_custom_link', 'http://propane.local/pagetocustomagain/');
-
-
-
-    // if ( $post_meta_keys ) {
-
-    //     foreach( $post_meta_keys as $key => $value ) {
-
-
-
-
-    //         // METHOD 2
-    //         // Check if the meta_key ends with 'page_link' and doesn't start with an underscore
-    //         // Check if the content is a post ID (with is_numeric())
-    //         if ( preg_match( "/^(?!_).+(page_link)$/", $key ) ) {
-
-    //             restore_current_blog();
-    //             $post_meta_value = get_post_meta( $original_post_id, $key );
-
-    //             // TODO: Get guid
-    //             switch_to_blog( $destination_blog_id );
-
-
-
-    //             // delete_post_meta( $new_post_id, $key );
-    //             // $changed_meta_key = preg_replace( "/(page_link)$/", "custom_link", $key );
-    //             // $add_post_meta( $new_post_id, $changed_meta_key, $changed_meta_value );
-    //         }
-    //     }
-    // }
-
 
     return false;
 }
@@ -123,38 +78,46 @@ function pull_acf_page_link( $new_post_id, $args, $post_array ) {
 }
 // add_action( 'dt_pull_post', 'pull_acf_page_link', 10, 3 );
 
-function get_mid_by_key( $post_id, $meta_key ) {
+
+//Page Builder Page link
+add_action( 'dt_push_post', 'update_link_types', 11, 4 );
+
+function update_link_types ($new_post_id, $original_post_id, $args, $site){
     global $wpdb;
+    $destination_blog_id = (is_numeric($site)) ? $site : $site->site->blog_id;
 
-    $mid = $wpdb->get_var( $wpdb->prepare("
-        SELECT meta_id FROM $wpdb->postmeta
-        WHERE post_id = %d
-        AND meta_key = %s", $post_id, $meta_key) );
+    // Switch to origin to get id
+    restore_current_blog();
+    $origin_blog_id = get_current_blog_id();
+    $origin_blog_id = ($origin_blog_id===$destination_blog_id) ? $args->site->blog_id : $origin_blog_id;
 
-    if( $mid != '' )
-    return (int)$mid;
+    // Go back
+    switch_to_blog( $destination_blog_id );
 
-  return false;
-}
+    $meta = get_post_meta($new_post_id);
+    foreach ($meta as $key => $value) {
+        if(strrpos($key, 'link_type')){
 
-function get_value_by_mid( $post_id, $meta_id ) {
-    global $wpdb;
+            if ($value[0]=='page') {
 
-    $meta_value = $wpdb->get_var( $wpdb->prepare("
-        SELECT meta_value FROM $wpdb->postmeta
-        WHERE post_id = %d
-        AND meta_id = %d", $post_id, $meta_id) );
+                $page_link = str_replace('link_type', 'page_link', $key);
 
-    return $meta_value;
-}
+                update_post_meta($new_post_id, $key, 'custom');
+                $ob_id = get_post_meta($new_post_id, $page_link, true);
+                delete_post_meta($new_post_id, $page_link);
 
-function get_key_by_mid( $post_id, $meta_id ) {
-    global $wpdb;
+                switch_to_blog( $origin_blog_id );
+                $post_destination_link = get_permalink($ob_id);
+                switch_to_blog( $destination_blog_id );
 
-    $meta_key = $wpdb->get_var( $wpdb->prepare("
-        SELECT meta_key FROM $wpdb->postmeta
-        WHERE post_id = %d
-        AND meta_id = %d", $post_id, $meta_id) );
 
-    return $meta_key;
+                $custom_link = str_replace('link_type', 'custom_link', $key);
+
+                update_post_meta($new_post_id, $custom_link, $post_destination_link);
+
+            }
+
+        }
+    }
+
 }
