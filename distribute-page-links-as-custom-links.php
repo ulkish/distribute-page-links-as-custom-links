@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Erase page links.
 
 
-function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site ) {
+function push_acf_page_link( $new_post_id, $original_post_id, $args, $site ) {
 
     $destination_blog_id = (is_numeric($site)) ? $site : $site->site->blog_id;
 
@@ -61,13 +61,13 @@ function distribute_acf_page_link( $new_post_id, $original_post_id, $args, $site
 
     return false;
 }
-add_action( 'dt_push_post', 'distribute_acf_page_link', 11, 4 );
+add_action( 'dt_push_post', 'push_acf_page_link', 11, 4 );
 
 
-// TODO: Make this work while pulling,
 function pull_acf_page_link( $new_post_id, $args, $post_array ) {
 
     $destination_blog_id = get_current_blog_id();
-    distribute_acf_page_link( $new_post_id, $original_post_id, $args, $destination_blog_id );
+    push_acf_page_link( $new_post_id, $original_post_id, $args, $destination_blog_id );
+
 }
-// add_action( 'dt_pull_post', 'pull_acf_page_link', 10, 3 );
+add_action( 'dt_pull_post', 'pull_acf_page_link', 10, 3 );
