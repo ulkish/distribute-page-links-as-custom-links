@@ -4,7 +4,7 @@ Plugin Name: Distribute Page Links as Custom Links
 Plugin URI:
 Description: Allows you to distribute page links as custom links using the Distributor plugin.
 Version: 1.0.0
-Author: hugomoran
+Author: Con Vista Al Mar
 Author URI: https://convistaalmar.com.ar/
 License: GPL2+
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -20,12 +20,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Create a custom link inside the new post, place the 'guid' inside.
 // Erase page links.
 
-add_action( 'dt_push_post', 'push_acf_page_link', 10, 4 );
-add_action( 'dt_pull_post', 'pull_acf_page_link', 10, 3 );
+add_action( 'dt_push_post', 'push_acf_page_link', 11, 4 );
+add_action( 'dt_pull_post', 'pull_acf_page_link', 11, 3 );
 
 function push_acf_page_link( $new_post_id, $original_post_id, $args, $site ) {
 
-    echo 'Push_acf_page_link function.';
     $destination_blog_id = (is_numeric($site)) ? $site : $site->site->blog_id;
 
     // Switch to original blog to get id
