@@ -23,14 +23,9 @@ While using [Distributor](https://distributorplugin.com/) along with [Advanced C
 
 == Frequently Asked Questions ==
 
-= A question that someone might have =
+= Does this work with Post Object Fields? =
 
-An answer to that question.
-
-= What about foo bar? =
-
-Answer to foo bar dilemma.
-
+Not at the moment.
 
 == Changelog ==
 
